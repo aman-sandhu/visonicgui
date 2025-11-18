@@ -1,85 +1,49 @@
-# custom_components/visonicgui/config_flow.py
-
-import logging
-import voluptuous as vol
+import asyncio
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_USER_CODE, CONF_USER_EMAIL, CONF_USER_PASSWORD, CONF_PANEL_ID, CONF_PARTITION
-import homeassistant.helpers.config_validation as cv
+from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.components.alarm_control_panel import DOMAIN as ALARM_DOMAIN
+from homeassistant.helpers import config_validation as cv
+import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-class VisonicGuiConfigFlow(config_entries.ConfigFlow, domain="visonicgui"):
-    """Handle a config flow for Visonic GUI."""
-    
+class VisonicConfigFlow(config_entries.ConfigFlow):
+    """Handle a config flow for the Visonic integration."""
+
     VERSION = 1
-    
+
     def __init__(self):
-        """Initialize the flow."""
+        """Initialize the config flow."""
         self._host = None
-        self._app_id = None
-        self._user_code = None
-        self._user_email = None
-        self._user_password = None
-        self._panel_id = None
-        self._partition = None
+        self._port = None
 
     async def async_step_user(self, user_input=None):
-        """Handle the initial step of configuration."""
-        errors = {}
-
+        """Handle the user input."""
         if user_input is not None:
-            # Assign user input values
             self._host = user_input[CONF_HOST]
-            self._app_id = user_input["app_id"]
-            self._user_code = user_input["user_code"]
-            self._user_email = user_input["user_email"]
-            self._user_password = user_input["user_password"]
-            self._panel_id = user_input["panel_id"]
-            self._partition = user_input["partition"]
+            self._port = user_input[CONF_PORT]
+            # Continue with async setup after user input
+            return await self.async_create_entry(title="Visonic", data=user_input)
 
-            # Attempt to establish a connection to the Visonic system
-            try:
-                from visonic import alarm as visonicalarm
-                alarm = visonicalarm.System(
-                    self._host,
-                    self._app_id,
-                    self._user_code,
-                    self._user_email,
-                    self._user_password,
-                    self._panel_id,
-                    self._partition
-                )
-
-                if not alarm.connect():
-                    errors["base"] = "connection_error"
-                else:
-                    return self.async_create_entry(
-                        title=self._host,
-                        data={
-                            CONF_HOST: self._host,
-                            "app_id": self._app_id,
-                            "user_code": self._user_code,
-                            "user_email": self._user_email,
-                            "user_password": self._user_password,
-                            "panel_id": self._panel_id,
-                            "partition": self._partition,
-                        },
-                    )
-            except Exception as e:
-                _LOGGER.error("Error during Visonic connection: %s", e)
-                errors["base"] = "unknown_error"
-        
-        # Show the form for the user to input configuration
         return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_HOST): str,
-                vol.Required("app_id"): str,
-                vol.Required("user_code"): str,
-                vol.Required("user_email"): str,
-                vol.Required("user_password"): str,
-                vol.Required("panel_id"): str,
-                vol.Optional("partition", default="ALL"): str,
-            }),
-            errors=errors,
+            step_id="user", data_schema=self._get_user_input_schema()
         )
+
+    def _get_user_input_schema(self):
+        """Return the schema for user input."""
+        return cv.Schema({
+            CONF_HOST: cv.string,
+            CONF_PORT: cv.port
+        })
+
+async def async_setup(hass, config):
+    """Set up the integration asynchronously."""
+    await asyncio.gather(
+        # Replace this with any necessary async setup
+        hass.async_add_executor_job(_setup_some_resource),
+    )
+    return True
+
+def _setup_some_resource():
+    """Function to setup any blocking resources asynchronously."""
+    pass
