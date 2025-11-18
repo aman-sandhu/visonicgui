@@ -1,18 +1,26 @@
 {
-    "config_flow": {
-        "step": {
-            "user": {
-                "data": {
-                    "host": "Host",
-                    "app_id": "App ID",
-                    "user_code": "User Code",
-                    "user_email": "User Email",
-                    "user_password": "User Password",
-                    "panel_id": "Panel ID",
-                    "partition": "Partition"
-                },
-                "description": "Configure the Visonic Alarm system."
-            }
-        }
+  "title": "Visonic Alarm",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Visonic Alarm",
+        "description": "Enter your alarm connection details."
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to reach the Visonic system.",
+      "invalid_auth": "Invalid login or password.",
+      "unknown": "Unknown error."
+    },
+    "abort": {
+      "already_configured": "This alarm is already set up."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Visonic Alarm Options"
+      }
+    }
+  }
 }
