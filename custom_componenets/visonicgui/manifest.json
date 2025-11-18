@@ -1,0 +1,13 @@
+{
+  "domain": "visonicgui",
+  "name": "Visonic GUI",
+  "documentation": "https://github.com/aman-sandhu/visonicgui",
+  "version": "1.0.0",
+  "requirements": [
+    "visonicalarm2==3.3.1",
+    "python-dateutil==2.7.3"
+  ],
+  "dependencies": [],
+  "codeowners": ["@ChatGPT"],
+  "config_flow": true
+}
