@@ -1,60 +1,44 @@
-# custom_components/visonicgui/alarm_control_panel.py
-
 import logging
-from time import sleep
-from datetime import timedelta
-
-from homeassistant.components import alarm_control_panel
-from homeassistant.const import STATE_UNKNOWN
-from . import DOMAIN
+from homeassistant.components.alarm_control_panel import AlarmControlPanel
+import asyncio
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = timedelta(seconds=7)  # reduced from 10s to 7s
+class VisonicAlarmControlPanel(AlarmControlPanel):
+    """Representation of a Visonic alarm control panel."""
 
-class VisonicAlarmControlPanel(alarm_control_panel.AlarmControlPanelEntity):
-    """Representation of a Visonic Alarm control panel."""
-
-    def __init__(self, alarm):
-        """Initialize the Visonic Alarm control panel."""
-        self._alarm = alarm
-        self._state = STATE_UNKNOWN
+    def __init__(self, name):
+        """Initialize the alarm control panel."""
+        self._name = name
+        self._state = None
 
     @property
     def name(self):
         """Return the name of the alarm control panel."""
-        return "Visonic Alarm"
+        return self._name
 
     @property
     def state(self):
-        """Return the state of the alarm."""
+        """Return the current state of the alarm control panel."""
         return self._state
 
-    def update(self):
-        """Update alarm state."""
-        # Update alarm status from the Visonic system
-        self._alarm.update_status()
-        raw_state = self._alarm.state
+    async def async_alarm_trigger(self, code=None):
+        """Trigger the alarm."""
+        await asyncio.sleep(0)  # Avoid blocking the event loop
+        _LOGGER.debug("Triggering alarm.")
+        self._state = "triggered"
+        return True
 
-        if raw_state is None:
-            self._state = STATE_UNKNOWN
-        else:
-            self._state = raw_state
-
-    def alarm_disarm(self, code=None):
-        """Disarm the alarm."""
-        self._alarm.disarm()
-        sleep(1)
-        self.update()
-
-    def alarm_arm_home(self, code=None):
+    async def async_alarm_arm_home(self, code=None):
         """Arm the alarm in home mode."""
-        self._alarm.arm_home()
-        sleep(1)
-        self.update()
+        await asyncio.sleep(0)  # Avoid blocking the event loop
+        _LOGGER.debug("Arming alarm in home mode.")
+        self._state = "armed_home"
+        return True
 
-    def alarm_arm_away(self, code=None):
-        """Arm the alarm in away mode."""
-        self._alarm.arm_away()
-        sleep(1)
-        self.update()
+    async def async_alarm_disarm(self, code=None):
+        """Disarm the alarm."""
+        await asyncio.sleep(0)  # Avoid blocking the event loop
+        _LOGGER.debug("Disarming alarm.")
+        self._state = "disarmed"
+        return True
