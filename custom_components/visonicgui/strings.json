@@ -1,0 +1,40 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Visonic Alarm Connection",
+        "description": "Enter connection details for your Visonic alarm panel.",
+        "data": {
+          "host": "IP Address",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password",
+          "panel_type": "Panel Type",
+          "event_hour_offset": "Event Timestamp Offset (Hours)",
+          "no_pin_required": "Disable PIN Requirement",
+          "user_code": "Alarm PIN"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not communicate with the alarm system.",
+      "invalid_auth": "Invalid username or password.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This alarm system is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Visonic Alarm Options",
+        "data": {
+          "event_hour_offset": "Event Timestamp Offset (Hours)",
+          "no_pin_required": "Disable PIN Requirement",
+          "user_code": "Alarm PIN"
+        }
+      }
+    }
+  }
+}
