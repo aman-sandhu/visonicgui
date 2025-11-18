@@ -154,4 +154,54 @@ class VisonicAlarm(alarm.AlarmControlPanelEntity):
             "IDLE": STATE_ALARM_DISARMED,
             "ARMING": STATE_ALARM_ARMING,
             "EXITDELAY": STATE_ALARM_ARMING,
-            "ENTRYDELAY":
+            "ENTRYDELAY": STATE_ALARM_PENDING,
+            "ALARM": STATE_ALARM_TRIGGERED,
+            "TRIGGERED": STATE_ALARM_TRIGGERED,
+        }
+
+        self._state = mapping.get(status, STATE_UNKNOWN)
+
+    @property
+    def supported_features(self) -> int:
+        return SUPPORT_VISONIC
+
+    def alarm_disarm(self, code=None):
+        if not self._no_pin_required and code != self._code:
+            pn.create(self._hass, "You entered the wrong disarm code.", title="Disarm Failed")
+            return
+
+        hub.alarm.disarm()
+        sleep(1)
+        self.update()
+
+    def alarm_arm_home(self, code=None):
+        if not self._no_pin_required and code != self._code:
+            pn.create(self._hass, "You entered the wrong arm code.", title="Arm Failed")
+            return
+
+        if hub.alarm.ready:
+            hub.alarm.arm_home()
+            sleep(1)
+            self.update()
+        else:
+            pn.create(
+                self._hass,
+                "The alarm system is not in a ready state. Maybe there are doors or windows open?",
+                title="Arm Failed",
+            )
+
+    def alarm_arm_away(self, code=None):
+        if not self._no_pin_required and code != self._code:
+            pn.create(self._hass, "You entered the wrong arm code.", title="Unable to Arm")
+            return
+
+        if hub.alarm.ready:
+            hub.alarm.arm_away()
+            sleep(1)
+            self.update()
+        else:
+            pn.create(
+                self._hass,
+                "The alarm system is not in a ready state. Maybe there are doors or windows open?",
+                title="Unable to Arm",
+            )
