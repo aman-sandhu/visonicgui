@@ -1,85 +1,100 @@
+"""Config flow for Visonic Alarm integration."""
+from __future__ import annotations
+
 import logging
-from homeassistant import config_entries
+from typing import Any
+
 import voluptuous as vol
+
+from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.helpers import config_validation as cv
-from . import DOMAIN
+from homeassistant.core import HomeAssistant
+import homeassistant.helpers.config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
-class VisonicAlarmConfigFlow(config_entries.ConfigFlow):
-    """Handle a config flow for the Visonic Alarm integration."""
+from . import (
+    CONF_APP_ID,
+    CONF_EVENT_HOUR_OFFSET,
+    CONF_NO_PIN_REQUIRED,
+    CONF_PANEL_ID,
+    CONF_PARTITION,
+    CONF_USER_CODE,
+    CONF_USER_EMAIL,
+    CONF_USER_PASSWORD,
+    DEFAULT_NAME,
+    DEFAULT_PARTITION,
+)
+
+STEP_USER_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_HOST): cv.string,
+        vol.Required(CONF_APP_ID): cv.string,
+        vol.Required(CONF_USER_CODE): cv.string,
+        vol.Required(CONF_USER_EMAIL): cv.string,
+        vol.Required(CONF_USER_PASSWORD): cv.string,
+        vol.Required(CONF_PANEL_ID): cv.string,
+        vol.Optional(CONF_PARTITION, default=DEFAULT_PARTITION): cv.string,
+        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Optional(CONF_NO_PIN_REQUIRED, default=False): cv.boolean,
+        vol.Optional(CONF_EVENT_HOUR_OFFSET, default=0): vol.All(
+            vol.Coerce(int), vol.Range(min=-24, max=24)
+        ),
+    }
+)
+
+
+class VisonicConfigFlow(config_entries.ConfigFlow, domain="visonicalarm"):
+    """Handle a config flow for Visonic Alarm."""
 
     VERSION = 1
+    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
-    def __init__(self):
-        """Initialize the config flow."""
-        self._host = None
-        self._app_id = None
-        self._user_code = None
-        self._user_email = None
-        self._user_password = None
-        self._panel_id = None
-        self._partition = None
-
-    async def async_step_user(self, user_input=None):
-        """Handle the initial step of the config flow."""
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
+        """Handle the initial step."""
+        errors = {}
         if user_input is not None:
-            # Validate input and create the config entry
-            self._host = user_input[CONF_HOST]
-            self._app_id = user_input["app_id"]
-            self._user_code = user_input["user_code"]
-            self._user_email = user_input["user_email"]
-            self._user_password = user_input["user_password"]
-            self._panel_id = user_input["panel_id"]
-            self._partition = user_input.get("partition", "ALL")
-
-            # You can add here a function that tests the connection
-            # and only return if it's successful
+            # Validate by trying to connect to the alarm library in executor
             try:
-                # Try to connect to the alarm API to test if the credentials are correct
-                # Here, you would use the same connection logic you have in `setup()`
-                # For example:
-                from visonic import alarm as visonicalarm
-                alarm = visonicalarm.System(
-                    self._host,
-                    self._app_id,
-                    self._user_code,
-                    self._user_email,
-                    self._user_password,
-                    self._panel_id,
-                    self._partition
-                )
-                alarm.connect()
-                alarm.update_status()
-            except Exception as ex:
-                _LOGGER.error("Error connecting to Visonic Alarm: %s", ex)
-                return self.async_abort(reason="cannot_connect")
+                # Import the visonic library here
+                from visonic import alarm as visonicalarm  # type: ignore
+            except Exception as ex:  # pragma: no cover - import/runtime
+                _LOGGER.exception("Failed to import visonic library: %s", ex)
+                errors["base"] = "import_error"
+                return self.async_show_form(step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors)
 
-            # Create the entry if the test was successful
-            return self.async_create_entry(
-                title=self._host,
-                data={
-                    CONF_HOST: self._host,
-                    "app_id": self._app_id,
-                    "user_code": self._user_code,
-                    "user_email": self._user_email,
-                    "user_password": self._user_password,
-                    "panel_id": self._panel_id,
-                    "partition": self._partition,
-                }
+            # Create a candidate hub and attempt to connect
+            hub = visonicalarm.System(
+                user_input[CONF_HOST],
+                user_input[CONF_APP_ID],
+                user_input[CONF_USER_CODE],
+                user_input[CONF_USER_EMAIL],
+                user_input[CONF_USER_PASSWORD],
+                user_input[CONF_PANEL_ID],
+                user_input.get(CONF_PARTITION, DEFAULT_PARTITION),
             )
 
-        # If no input yet, display the form to the user
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_HOST): cv.string,
-                vol.Required("app_id"): cv.string,
-                vol.Required("user_code"): cv.string,
-                vol.Required("user_email"): cv.string,
-                vol.Required("user_password"): cv.string,
-                vol.Required("panel_id"): cv.string,
-                vol.Optional("partition", default="ALL"): cv.string,
-            })
-        )
+            # Try to connect in the executor
+            connected = await self.hass.async_add_executor_job(hub.connect)
+            if not connected:
+                errors["base"] = "cannot_connect"
+                return self.async_show_form(step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors)
+
+            # use host + panel id as unique id candidate
+            uniq = f"{user_input[CONF_HOST]}_{user_input[CONF_PANEL_ID]}"
+            await self.async_set_unique_id(uniq)
+            self._abort_if_unique_id_configured(updates=user_input)
+
+            return self.async_create_entry(title=user_input.get(CONF_NAME, "Visonic Alarm"), data=user_input)
+
+        return self.async_show_form(step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors={})
+
+    async def async_step_import(self, import_config: dict[str, Any]):
+        """Handle import from configuration.yaml."""
+        # Called by async_setup when YAML exists; treat similar to user step.
+        # Avoid duplicates by unique id
+        uniq = f"{import_config[CONF_HOST]}_{import_config[CONF_PANEL_ID]}"
+        await self.async_set_unique_id(uniq)
+        self._abort_if_unique_id_configured(updates=import_config)
+
+        return await self.async_step_user(import_config)
