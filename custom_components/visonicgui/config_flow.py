@@ -1,9 +1,9 @@
 import asyncio
+import logging
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.components.alarm_control_panel import DOMAIN as ALARM_DOMAIN
-from homeassistant.helpers import config_validation as cv
-import logging
+import homeassistant.helpers.config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,14 +36,8 @@ class VisonicConfigFlow(config_entries.ConfigFlow):
             CONF_PORT: cv.port
         })
 
-async def async_setup(hass, config):
-    """Set up the integration asynchronously."""
-    await asyncio.gather(
-        # Replace this with any necessary async setup
-        hass.async_add_executor_job(_setup_some_resource),
-    )
+async def async_setup_entry(hass, config_entry):
+    """Set up the integration after it has been configured."""
+    _LOGGER.debug("Setting up Visonic config entry")
+    # Add any additional setup steps if needed.
     return True
-
-def _setup_some_resource():
-    """Function to setup any blocking resources asynchronously."""
-    pass
